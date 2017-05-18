@@ -1,0 +1,59 @@
+#BLAIS Antoine et LARRANG Damien EPSI B3
+
+- name: installation du jdk8
+  package: name=openjdk-8-jdk-headless state=present
+
+- name: installation jsvc
+  package: name=jsvc
+
+- name: creation groupe "tomee"
+  group: name=tomee
+
+- name: creation utilisateur "tomee"
+  user: name=tomee group=tomee home=/home/tomee createhome=yes system=yes
+  become: True
+  become_method: sudo
+
+- name: download apache-tomee
+  get_url: url=http://repo.maven.apache.org/maven2/org/apache/tomee/apache-tomee/7.0.3/apache-tomee-7.0.3-plus.tar.gz dest=/opt/apache-tomee-7.0.3-plus.tar.gz
+
+- name: extract apache-tomee
+  command: chdir=/opt /bin/tar xvf /opt/apache-tomee-7.0.3-plus.tar.gz -C /opt creates=/opt/tomee
+
+- name: changer proprietaire du dossier /opt/tomee
+  shell: chgrp -R tomee /opt/tomee
+
+- name: change proprietaires /opt/tomee/conf
+  shell: chmod -R g+r /opt/tomee/conf/
+
+- name: change droits /opt/tomee/conf
+  shell: chmod g+x /opt/tomee/conf/
+
+- name: change droits /opt/tomee/webapps/ /work/ /temp/ /logs/
+  shell: chown -R tomee /opt/tomee/webapps/ /opt/tomee/work/ /opt/tomee/temp/ /opt/tomee/logs/
+
+- name: editer fichier setenv.sh
+  shell: echo "JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 \nJSVC=/usr/bin/jsvc \nTOMCAT_USER=tomee" > /opt/tomee/bin/setenv.sh
+
+- name: change droits setenv.sh
+  shell: chmod +x /opt/tomee/bin/setenv.sh
+
+- name: download tomee.txt
+  get_url: url=http://tutoriels.meddeb.net/wp-content/uploads/2014/11/tomee.txt dest=/etc/
+
+- name: déplacer, renommer tomee.txt
+  shell: mv /etc/tomee.txt /etc/init.d/tomee-server
+  
+- name: change droits tomee-server init.d
+  shell: sudo chmod +x /etc/init.d/tomee-server
+
+- name: relance systemctl
+  shell: systemctl daemon-reload
+  
+- name: start tomee
+  shell: service tomee-server start 
+  
+- name: lancer tomee-server au démarrage et redémarrage du conteneur
+  shell: ln -s /etc/init.d/tomee-server /etc/rc2.d/S04tomee-server
+  shell: ln -s /etc/init.d/tomee-server /etc/rc6.d/K04tomee-server
+
